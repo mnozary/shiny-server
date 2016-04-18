@@ -191,11 +191,11 @@ shinyServer(function(input, output) {
       inFile <- input$file2
       
       if (is.null(inFile)){
-        dat <- readLines("headers.csv")
+        dat <- readLines("headers.csv", encoding = "latin1")
         #return(NULL)
       }else{
         #for test: dat <- readLines(inFile)
-        dat <- readLines(inFile$datapath)
+        dat <- readLines(inFile$datapath, encoding = "latin1")
       }
       
       dat <- gsub(" ", ".", dat)
