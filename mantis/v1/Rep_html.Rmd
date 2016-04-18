@@ -1,0 +1,224 @@
+---
+title: "MANTIS: A report for Adira"
+author: "Mohammad Nozari"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+runtime: shiny
+---
+
+## Summary
+This report is written to help Adira's staff verify the collected data which will be used by MANTIS project. In this section, a summary of the log file is introduced.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(shiny)
+library(knitr)
+library(devtools)
+library(DT)
+library(caret)
+options(DT.options = list(pageLength = 20))
+
+histPercent <- function(x, ...) {
+   H <- hist(x, plot = FALSE)
+   H$density <- with(H, 100 * density* diff(breaks)[1])
+   labs <- paste(round(H$density), "%", sep="")
+   plot(H, freq = FALSE, labels = labs, ylim=c(0, 1.08*max(H$density)),...)
+}
+
+# ESA.col.names <- c("ax0.ra4","ax1.ra4","ax2.ra4","ax3.ra4","ax4.ra4","ax6.ra4","ax7.ra4","LazerSafe.PCSSConditionCode","ax0.ra5","ax1.ra5","ax2.ra5","ax3.ra5","ax4.ra5","ax6.ra5","ax7.ra5","C60.0","C60.1","M5.4","M5.5","np","IO1.15","M2.9","M2.10","IO2.14","LazerSafe.CncOperationalModb.6","C70.21","C70.16","C70.17","C70.18","C70.19","C62.14","LazerSafe.PCSSReplay.2","pargene.dwgn12","IO100","IO52","IO53")
+# Adira.col.names <- c("Position.Y1","Position.Y2","Position.X1","Position.X2","Position.R","Position.Z1","Position.Z2","Lazersafe.Error","Speed.Y1","Speed.Y2","Speed.X1","Speed.X2","Speed.R1","Speed.Z1","Speed.Z2","Pedal.Down","Pedal.Up","Start.NC","Stop.NC","N.Quinagem","Seq.Quinagem","Ciclo.Automatico","Ciclo.de.Quinagem","DNC.Manual","Programacao.NC","Axis.in.Position","PMS","PCV","PCL","PMI","MUTE","Comunicacao.LZS.CNC","Horas.de.trabalho","Pressure.DNC","Pressure.Machine.Y1","Pressure.Machine.Y2")
+# 
+# col.names <- c("time", "ax0ra4", "ax1ra4", "ax2ra4", "ax3ra4", "ax4ra4", "ax6ra4", "ax7ra4", 
+#                "C6221", "ax0ra5", "ax1ra5", "ax2ra5", "ax3ra5", "ax4ra5", "ax6ra5", "ax7ra5", 
+#                "C600", "C601", "M54", "M55", "np", "IO115", "M29",
+#                "M210", "IO214", "lazer6", "C7021", "C7016",
+#                "C7017", "C7018", "C7019", "C6214", "lazer2", "dwgn12",
+#                "last1", "last2", "last3", "last4", "last5", "last6",
+#                "last7")
+
+# col.names <- Adira.col.names
+outputDir <- "awesome_app"
+
+file.name <- paste0(outputDir, "/output.csv")
+dt <- read.csv(file.name, header = TRUE, sep = ",")
+col.names <- colnames(dt)
+```
+
+The number of records after cleaning the data and remove the duplicates is `r nrow(dt)` and the dataset has `r ncol(dt)` columns.
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+col.class <- lapply(dt, class)
+stat.cols <- data.frame(colname=character(),isconstant=character(),nearzero=character(),min=numeric(), mean=numeric(), max=numeric(), uniq.v=numeric())
+dt$datetime <- as.character(dt$datetime)
+levels(stat.cols$colname) <- colnames(dt)
+levels(stat.cols$isconstant) <- c("Yes","No")
+levels(stat.cols$nearzero) <- c("Yes","No")
+nearzero.cols <- nearZeroVar(dt, saveMetrics = FALSE, names = TRUE)
+zero.cols <- c()
+row.no <- 1
+
+for(i in 1:ncol(dt)){
+  if(class(dt[,i])=="numeric" || class(dt[,i])=="integer"){
+    stat.cols[row.no, c("colname")] <- colnames(dt)[i]
+    stat.cols[row.no, c("min")] <- min(dt[,i], na.rm = TRUE)
+    stat.cols[row.no, c("max")] <- max(dt[,i], na.rm = TRUE)
+    stat.cols[row.no, c("mean")] <- mean(dt[,i], na.rm = TRUE)
+    stat.cols[row.no, c("uniq.v")] <- length(unique(dt[,i]))
+    if(stat.cols[row.no, c("min")]==stat.cols[row.no, c("max")])
+    {
+      zero.cols <- c(zero.cols, colnames(dt)[i])
+      stat.cols[row.no, c("isconstant")] <- "Yes"
+    }else{
+      stat.cols[row.no, c("isconstant")] <- "No"
+    }
+    if(col.names[i] %in% nearzero.cols){
+      zero.cols <- c(zero.cols, colnames(dt)[i])
+      stat.cols[row.no, c("nearzero")] <- "Yes"
+    }else{
+      stat.cols[row.no, c("nearzero")] <- "No"
+    }
+    row.no <- row.no + 1
+  }
+}
+colnames(stat.cols) <- c("Column Name","Constant","NearZero","Minimum","Average","Maximum", "Unique Values")
+
+#library(xtable)
+#print(xtable(stat.cols), type = "html")
+cat("Dataset with useless columns in orange color.")
+cat("\n")
+DT::datatable(stat.cols, filter = 'top', callback = DT::JS("return table;"))%>% formatStyle(
+  'NearZero',
+  target = 'row',
+  backgroundColor = styleEqual(c("Yes", "No"), c('orange', 'lightgreen'))
+)%>% formatStyle(
+  'Constant',
+  target = 'row',
+  backgroundColor = styleEqual(c("Yes", "No"), c('orange', 'lightgreen'))
+)
+
+#source: http://topepo.github.io/caret/preprocess.html
+#remove constant and near zero columns
+ind.remove <- which(stat.cols$`Column Name` %in% zero.cols)
+stat.cols2 <- stat.cols[-ind.remove,-c(2,3)]
+
+```
+
+## Useful columns
+Here are the basic statistics for the non-constant, non-nearzero, and without combination columns.
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+#source: http://shiny.rstudio.com/gallery/datatables-options.html
+shinyApp(
+  
+  ui = fluidPage(
+    DT::dataTableOutput("usefuldata")
+  ),
+  
+  server = function(input, output) {
+    output$usefuldata <- DT::renderDataTable({
+      DT::datatable(stat.cols2, filter = 'top', options = list(pageLength = 25), callback = DT::JS("return table;"))%>% formatStyle(
+        'Column Name',
+        target = 'row',
+        backgroundColor = 'lightgreen'
+      )
+    })
+  }
+)
+```
+
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+char.cols <- c("time", "date", "datetime", "noDup", "timeDiff")
+ind.our.col <- which(colnames(dt) %in% char.cols)
+ind.col.remove <- which(colnames(dt) %in% zero.cols)
+dt.noconstant <- dt[,-c(ind.our.col,ind.col.remove)]
+
+#remove correlated columns
+#ind.col.cor <- findCorrelation(cor(dt.noconstant), cutoff = .90, verbose = FALSE)
+#colnames(dt.noconstant)[ind.col.cor]
+#ind.col.remove <- which(colnames(dt) %in% zero.cols)
+
+
+#remove linear combinations
+comboInfo <- findLinearCombos(dt.noconstant)
+if(!is.null(comboInfo$remove)) {dt.noconstant <- dt.noconstant[, -comboInfo$remove]}
+
+#write clean data to the folder
+dt.noconstant$time <- dt$time
+dt.noconstant$date <- dt$date
+dt.noconstant$datetime <- dt$datetime
+dt.noconstant$noDup <- dt$noDup
+dt.noconstant$timeDiff <- dt$timeDiff
+
+write.csv(dt.noconstant,file = paste0(outputDir,"/clean-data.csv"), row.names = FALSE)
+
+#print("Option 2")
+
+#kable(stat.cols, digits = 2, align = c("c", rep("l", 3)), format = "markdown")
+```
+
+In the above table, you can see a basic statistics which are calculated for each column including: minimum, maximum, and average. You also have the ability to filter columns or search for specific columns or values.
+
+## Download the clean dataset
+
+Before analyzing each column, you can download the clean data.
+
+```{r, echo = FALSE}
+shinyApp(
+  
+  ui = fluidPage(
+    downloadButton('downloadData', 'Download')
+  ),
+  
+  server = function(input, output) {
+    
+    output$downloadData <- downloadHandler(
+    
+    filename = function() {
+      paste0(outputDir, "/clean-data.csv")
+    },
+    content = function(file) {
+      write.table(dt.noconstant, file, sep = ",", row.names = FALSE)
+    }
+  )
+  }
+)
+```
+
+
+## Explore each column
+Now each column is explored to see which column has errors or inconsistent value.
+
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+dt.backup <- dt
+dt <- dt.noconstant
+
+col.names.back <- col.names
+col.names <- colnames(dt)
+
+for(j in 1:ncol(dt)){
+  if(class(dt[,j])=="numeric" || class(dt[,j])=="integer"){
+    cat("\n")
+    cat("Column", col.names[j], "\n")
+    cat("\n")
+    #h <- hist(dt[,j], main = paste0("Column ", col.names[j]), labels = TRUE, xlab = paste0(col.names[j]))
+    #hist(dt[,j], main = paste0("Column ", col.names[j]), labels = TRUE, xlab = paste0(col.names[j]), ylim = c(min(table(dt[,j])), sum(table(dt[,j]))))
+    
+    # prob=TRUE for probabilities not counts
+    ##histPercent(dt[,j], col="gray", xlab = paste0(col.names[j]), main= paste0(col.names[j]))
+    h <- hist(dt[,j], plot = FALSE)
+    data.labels <- paste0(round(with(h, 100 * density* diff(breaks)[1]),0),"%")
+    hist(dt[,j], prob=TRUE, col="lightgreen", xlab = "Column's Values",ylim = c(min(h$density),max(h$density)*1.5),main = paste0(col.names[j]))
+    text(h$mids, h$density, data.labels, adj = c(.5, -.5), col = "green4", font=2)
+
+    lines(density(dt[,j]), col="blue", lwd=2) # add a density estimate with defaults
+    #lines(density(dt[,j], adjust=2), lty="dotted", col="darkgreen", lwd=2) 
+  }else{
+    cat("\n")
+    cat("Column", col.names[j], "\n")
+    cat("\n")
+    cat("The number of unique values in this column is: ", length(unique(dt[,j])), "\n")
+    #table(dt[,j])
+  }
+}
+```

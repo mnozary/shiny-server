@@ -1,0 +1,6 @@
+,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36
+Referência ESA,ax0.ra4,ax1.ra4,ax2.ra4,ax3.ra4,ax4.ra4,ax6.ra4,ax7.ra4,LazerSafe.PCSSConditionCode,ax0.ra5,ax1.ra5,ax2.ra5,ax3.ra5,ax4.ra5,ax6.ra5,ax7.ra5,C60.0,C60.1,M5.4,M5.5,np,IO1.15,M2.9,M2.10,IO2.14,LazerSafe.CncOperationalModb.6,C70.21,C70.16,C70.17,C70.18,C70.19,C62.14,LazerSafe.PCSSReplay.2,pargene.dwgn12,IO100,IO52,IO53
+Referência Adira,Position Y1,Position Y2,PositionX1,Position X2,Position R,Position Z1,Position Z2,Lazersafe Error,Speed Y1,Speed Y2,Speed X1,Speed X2,Speed R1,Speed Z1,Speed Z2,Pedal Down,Pedal Up,Start NC,Stop NC,Nº. Quinagem,Seq. Quinagem,Ciclo Automático,Ciclo de Quinagem,DNC Manual,Programação NC,Axis in Position,PMS,PCV,PCL,PMI,MUTE,Comunicação LZS-CNC,Horas de trabalho,Pressure by DNC,Pressure by Machine Y1,Pressure by Machine Y2
+Divisão por 1000,1,1,1,1,1,1,1,,1,1,1,1,1,1,1,,,,,,,,,,,,,,,,,,,,,
+Hexadecimal,,,,,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Numero de casas decimais,2,2,2,2,2,2,2,,0,0,0,0,0,0,0,,,,,,,,,,,,,,,,,,,,,
